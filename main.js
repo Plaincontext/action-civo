@@ -2,6 +2,7 @@ const core = require('@actions/core');
 const exec = require('@actions/exec');
 const tc = require('@actions/tool-cache');
 const { Octokit } = require("@octokit/rest");
+const {v4: uuid} = require("uuid");
 
 const baseDownloadURL = "https://github.com/civo/cli/releases/download"
 const fallbackVersion = "0.6.0"
@@ -49,6 +50,11 @@ Failed to retrieve latest version; falling back to: ${fallbackVersion}`);
         version = version.substr(1);
     }
 
+    // disable workflow commands
+    const uniqueToken = uuid()
+    console.log(`::stop-commands::${uniqueToken}`)
+
+
     var path = tc.find("civo", version);
     if (!path) {
         const installPath = await downloadDoctl(version);
@@ -57,7 +63,11 @@ Failed to retrieve latest version; falling back to: ${fallbackVersion}`);
     core.addPath(path);
     core.info(`>>> civo version v${version} installed to ${path}`);
 
-    var token = core.getInput('token', { required: true });
+    const token = core.getInput('token', { required: true });
+
+    // enable workflow commands
+    console.log(`::${uniqueToken}::`)
+
     await exec.exec('civo apikey add action ', [token]);
     await exec.exec('civo apikey use action');
     core.info('>>> Successfully logged into civo');
